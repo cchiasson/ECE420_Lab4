@@ -6,6 +6,7 @@
 #include "Lab4_IO.h"
 #include "Lab4_IO.c"
 #include "timer.h"
+#include <mpi.h>
 
 #define EPSILON 0.00001
 #define DAMPING_FACTOR 0.85
@@ -20,18 +21,18 @@ int main (int argc, char* argv[]){
     int i, j;
     double damp_const;
     int iterationcount = 0;
-    double cst_addapted_threshold;
     double error;
     double start, end, time = 0;
 
     get_node_stat(&nodecount, &num_in_links, &num_out_links);
 
-    // Adjust the threshold according to the problem size
-    cst_addapted_threshold = THRESHOLD;
     GET_TIME(start);
     // Calculate the result
     if (node_init(&nodehead, num_in_links, num_out_links, 0, nodecount)) return 254;
     
+    MPI_Init(&argc, &argv);
+
+    //Create damping constant for each calculation
     printf("%d\n", nodecount);
     r = malloc(nodecount * sizeof(double));
     r_pre = malloc(nodecount * sizeof(double));
@@ -58,9 +59,11 @@ int main (int argc, char* argv[]){
     time = end-start;
 
     Lab4_saveoutput(r, nodecount, time);
-    // post processing
+    // post processing    
+    MPI_Finalize();
     node_destroy(nodehead, nodecount);
-    //free(num_in_links); 
-    //free(num_out_links);
+    free(num_in_links); 
+    free(num_out_links);
+
     
 }
