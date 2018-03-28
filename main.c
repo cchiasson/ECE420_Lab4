@@ -32,6 +32,8 @@ int main (int argc, char* argv[]){
     MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
 
     get_node_stat(&nodecount, &num_in_links, &num_out_links);
+    int sub_start = nodecount*my_id/num_procs;
+    int sub_end = nodecount*(my_id+1)/num_procs;
     sub_node = nodecount/num_procs; //278 for 4 processes, 556 for 2
 
 
@@ -51,8 +53,9 @@ int main (int argc, char* argv[]){
     // Calculate the result
     
     if (node_init(&nodehead, num_in_links, num_out_links, 0, nodecount)) return 254;
-    MPI_Scatter(r, sub_node, MPI_DOUBLE, sub_r, sub_node, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    //MPI_Scatter(r, sub_node, MPI_DOUBLE, sub_r, sub_node, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     // CORE CALCULATION
+    MPI_Bcast(r,sub_node,MPI_DOUBLE,0,MPI_COMM_WORLD);
     do{
         ++iterationcount;
         // make a copy of the vector.
@@ -65,24 +68,25 @@ int main (int argc, char* argv[]){
                 sub_r[i] += sub_r_pre[nodehead[i].inlinks[j]] / num_out_links[nodehead[i].inlinks[j]];
             }
             sub_r[i] *= DAMPING_FACTOR;
-            sub_r[i] += damp_const;     
-		}
+            sub_r[i] += damp_const;  
+	    printf("%f %d\n",sub_r[i],my_id);   
+	}
 		
 		//~ printf("iteration: %d proc: %d\n", iterationcount, my_id);
 		//MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
 		//printf("ID: %d\n",my_id);
-		if (my_id==0) {
-			printf("attempting gather for 0\n");
+		//if (my_id==0) {
+			//printf("attempting gather for 0\n");
 			MPI_Gather(sub_r, sub_node, MPI_DOUBLE, r, sub_node, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-			if (rel_error(r, r_pre, nodecount)<EPSILON) {
+			/*if (rel_error(r, r_pre, nodecount)<EPSILON) {
 				printf("break condition %d %d\n", my_id, iterationcount);
 			}
 		}
 		else {
 			MPI_Gather(sub_r, sub_node, MPI_DOUBLE, NULL, 0, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-		}
-		printf("%f %d\n", rel_error(sub_r, sub_r_pre, sub_node), my_id);
-		
+		}*/
+		//printf("%f %d\n", rel_error(sub_r, sub_r_pre, sub_node), my_id);	
+    MPI_Bcast(sub_r,sub_node,MPI_DOUBLE,0,MPI_COMM_WORLD);
     } while(rel_error(sub_r, sub_r_pre, sub_node) >= EPSILON);
     
     
